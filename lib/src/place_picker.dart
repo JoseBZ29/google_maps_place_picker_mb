@@ -1,18 +1,19 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_api_headers/google_api_headers.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:google_maps_place_picker_mb/google_maps_place_picker.dart';
 import 'package:google_maps_place_picker_mb/providers/place_provider.dart';
-import 'package:google_maps_place_picker_mb/src/autocomplete_search.dart';
 import 'package:google_maps_place_picker_mb/src/controllers/autocomplete_search_controller.dart';
 import 'package:google_maps_place_picker_mb/src/google_map_place_picker.dart';
-import 'package:flutter_google_maps_webservices/places.dart';
+import 'package:google_places_flutter/google_places_flutter.dart';
+import 'package:google_places_flutter/model/prediction.dart';
+import 'package:googlemaps_flutter_webservices/places.dart' as googleMapsPlaces;
 import 'package:http/http.dart';
 import 'package:provider/provider.dart';
-import 'dart:io' show Platform;
 
 import 'package:uuid/uuid.dart';
 
@@ -56,7 +57,7 @@ class PlacePicker extends StatefulWidget {
     this.autocompleteOffset,
     this.autocompleteRadius,
     this.autocompleteLanguage,
-    this.autocompleteComponents,
+    // this.autocompleteComponents,
     this.autocompleteTypes,
     this.strictbounds,
     this.region,
@@ -107,7 +108,7 @@ class PlacePicker extends StatefulWidget {
   final num? autocompleteRadius;
   final String? autocompleteLanguage;
   final List<String>? autocompleteTypes;
-  final List<Component>? autocompleteComponents;
+  // final List<Component>? autocompleteComponents;
   final bool? strictbounds;
   final String? region;
 
@@ -242,6 +243,8 @@ class _PlacePickerState extends State<PlacePicker> {
   PlaceProvider? provider;
   SearchBarController searchBarController = SearchBarController();
   bool showIntroModal = true;
+  final TextEditingController searchController = TextEditingController();
+  FocusNode focusNode = FocusNode();
 
   @override
   void initState() {
@@ -258,14 +261,14 @@ class _PlacePickerState extends State<PlacePicker> {
   }
 
   Future<PlaceProvider> _initPlaceProvider() async {
-    final headers = await GoogleApiHeaders().getHeaders();
+    final headers = await const GoogleApiHeaders().getHeaders();
     final provider = PlaceProvider(
       widget.apiKey,
       widget.proxyBaseUrl,
       widget.httpClient,
       headers,
     );
-    provider.sessionToken = Uuid().v4();
+    provider.sessionToken = const Uuid().v4();
     provider.desiredAccuracy = widget.desiredLocationAccuracy;
     provider.setMapType(widget.initialMapType);
     if (widget.useCurrentLocation != null && widget.useCurrentLocation!) {
@@ -277,16 +280,17 @@ class _PlacePickerState extends State<PlacePicker> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-        onWillPop: () {
-          searchBarController.clearOverlay();
-          return Future.value(true);
+    return PopScope(
+        onPopInvoked: (didPop) {
+          if (didPop) {}
+          // searchBarController.clearOverlay();
         },
         child: FutureBuilder<PlaceProvider>(
           future: _futureProvider,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()));
             } else if (snapshot.hasData) {
               provider = snapshot.data;
               return MultiProvider(
@@ -304,7 +308,8 @@ class _PlacePickerState extends State<PlacePicker> {
                       iconTheme: Theme.of(context).iconTheme,
                       elevation: 0,
                       backgroundColor: Colors.transparent,
-                      titleSpacing: 0.0,
+                      titleSpacing: 5.0,
+                      toolbarHeight: kToolbarHeight + 15,
                       title: _buildSearchBar(context),
                     ),
                     body: _buildMapWithLocation(),
@@ -327,7 +332,7 @@ class _PlacePickerState extends State<PlacePicker> {
                 )
               ]);
             } else {
-              children.add(CircularProgressIndicator());
+              children.add(const CircularProgressIndicator());
             }
 
             return Scaffold(
@@ -345,84 +350,79 @@ class _PlacePickerState extends State<PlacePicker> {
 
   Widget _buildSearchBar(BuildContext context) {
     return Row(
-      children: <Widget>[
-        SizedBox(width: 15),
-        provider!.placeSearchingState == SearchingState.Idle &&
-                (widget.automaticallyImplyAppBarLeading ||
-                    widget.onTapBack != null)
-            ? IconButton(
-                onPressed: () {
-                  if (!showIntroModal ||
-                      widget.introModalWidgetBuilder == null) {
-                    provider?.debounceTimer?.cancel();
-                    if (widget.onTapBack != null) {
-                      widget.onTapBack!();
-                      return;
-                    }
-                    Navigator.maybePop(context);
-                  }
-                },
-                icon: Icon(
-                  Platform.isIOS ? Icons.arrow_back_ios : Icons.arrow_back,
-                ),
-                color: Colors.black.withAlpha(128),
-                padding: EdgeInsets.zero)
-            : Container(),
+      children: [
+        IconButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            icon: const Icon(Icons.arrow_back)),
         Expanded(
-          child: AutoCompleteSearch(
-              appBarKey: appBarKey,
-              searchBarController: searchBarController,
-              sessionToken: provider!.sessionToken,
-              hintText: widget.hintText,
-              searchingText: widget.searchingText,
-              debounceMilliseconds: widget.autoCompleteDebounceInMilliseconds,
-              onPicked: (prediction) {
-                if (mounted) {
-                  _pickPrediction(prediction);
-                }
-              },
-              onSearchFailed: (status) {
-                if (widget.onAutoCompleteFailed != null) {
-                  widget.onAutoCompleteFailed!(status);
-                }
-              },
-              autocompleteOffset: widget.autocompleteOffset,
-              autocompleteRadius: widget.autocompleteRadius,
-              autocompleteLanguage: widget.autocompleteLanguage,
-              autocompleteComponents: widget.autocompleteComponents,
-              autocompleteTypes: widget.autocompleteTypes,
-              strictbounds: widget.strictbounds,
-              region: widget.region,
-              initialSearchString: widget.initialSearchString,
-              searchForInitialValue: widget.searchForInitialValue,
-              autocompleteOnTrailingWhitespace:
-                  widget.autocompleteOnTrailingWhitespace),
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              print('taaaaaap');
+              FocusScope.of(context).requestFocus(focusNode);
+            },
+            onLongPress: () {
+              showMenu(
+                context: context,
+                position: RelativeRect.fromLTRB(0, 90, 50, 0),
+                items: [
+                  PopupMenuItem(
+                    child: Row(
+                      children: <Widget>[
+                        PopupMenuItem(
+                          onTap: () async {
+                            ClipboardData? datos =
+                                await Clipboard.getData(Clipboard.kTextPlain);
+                            if (datos != null && datos.text != null) {
+                              searchController.text = datos.text!;
+                            }
+                          },
+                          child: Text(
+                            "Pegar",
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+            child: IgnorePointer(
+              child: GooglePlaceAutoCompleteTextField(
+                textEditingController: searchController,
+                googleAPIKey: 'AIzaSyD-XCaBaTwOzNI0QBeNVZPL--YLxY3hedY',
+                countries: const ['MX'],
+                isLatLngRequired: true,
+                getPlaceDetailWithLatLng: (prediction) =>
+                    _pickPrediction(prediction),
+                itemClick: (prediction) {
+                  searchController.text = prediction.description!;
+                  focusNode.unfocus();
+                },
+                focusNode: focusNode,
+                isCrossBtnShown: false,
+                debounceTime: 400,
+                inputDecoration: const InputDecoration(
+                    hintText: "Buscar dirección",
+                    suffixIcon: Icon(Icons.search),
+                    suffixIconColor: Colors.black),
+              ),
+            ),
+          ),
         ),
-        SizedBox(width: 5),
       ],
     );
   }
 
   _pickPrediction(Prediction prediction) async {
     provider!.placeSearchingState = SearchingState.Searching;
-
-    final PlacesDetailsResponse response =
-        await provider!.places.getDetailsByPlaceId(
-      prediction.placeId!,
-      sessionToken: provider!.sessionToken,
-      language: widget.autocompleteLanguage,
-    );
-
-    if (response.errorMessage?.isNotEmpty == true ||
-        response.status == "REQUEST_DENIED") {
-      if (widget.onAutoCompleteFailed != null) {
-        widget.onAutoCompleteFailed!(response.status);
-      }
-      return;
-    }
-
+    final places = googleMapsPlaces.GoogleMapsPlaces(apiKey: widget.apiKey);
+    googleMapsPlaces.PlacesDetailsResponse response =
+        await places.getDetailsByPlaceId(prediction.placeId!);
+    PickResult.fromPlaceDetailResult(response.result);
     provider!.selectedPlace = PickResult.fromPlaceDetailResult(response.result);
-
     // Prevents searching again by camera movement.
     provider!.isAutoCompleteSearching = true;
 
@@ -503,7 +503,7 @@ class _PlacePickerState extends State<PlacePicker> {
       },
       onMoveStart: () {
         if (provider == null) return;
-        searchBarController.reset();
+        // searchBarController.reset();
       },
       onPlacePicked: widget.onPlacePicked,
       onCameraMoveStarted: widget.onCameraMoveStarted,
@@ -519,7 +519,7 @@ class _PlacePickerState extends State<PlacePicker> {
         builder: (BuildContext context, StateSetter setState) {
       return showIntroModal && widget.introModalWidgetBuilder != null
           ? Stack(children: [
-              Positioned(
+              const Positioned(
                 top: 0,
                 right: 0,
                 bottom: 0,
