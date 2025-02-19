@@ -392,7 +392,7 @@ class _PlacePickerState extends State<PlacePicker> {
             child: IgnorePointer(
               child: GooglePlaceAutoCompleteTextField(
                 textEditingController: searchController,
-                googleAPIKey: 'AIzaSyD-XCaBaTwOzNI0QBeNVZPL--YLxY3hedY',
+                googleAPIKey: widget.apiKey,
                 countries: const ['MX'],
                 isLatLngRequired: true,
                 getPlaceDetailWithLatLng: (prediction) =>
