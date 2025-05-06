@@ -58,6 +58,7 @@ class GoogleMapPlacePicker extends StatelessWidget {
     this.zoomGesturesEnabled = true,
     this.zoomControlsEnabled = false,
     this.fullMotion = false,
+    this.selectButtonColor,
   }) : super(key: key);
 
   final LatLng initialTarget;
@@ -103,6 +104,9 @@ class GoogleMapPlacePicker extends StatelessWidget {
 
   /// Use never scrollable scroll-view with maximum dimensions to prevent unnecessary re-rendering.
   final bool fullMotion;
+
+  /// Color of the select button
+  final Color? selectButtonColor;
 
   _searchByCameraLocation(PlaceProvider provider) async {
     // We don't want to search location again if camera location is changed by zooming in/out.
@@ -480,8 +484,8 @@ class GoogleMapPlacePicker extends StatelessWidget {
                 result.geometry!.location.lat,
                 result.geometry!.location.lng) <=
             pickArea!.radius;
-    WidgetStateColor buttonColor = WidgetStateColor.resolveWith(
-        (states) => canBePicked ? Colors.lightGreen : Colors.red);
+    WidgetStateColor buttonColor = WidgetStateColor.resolveWith((states) =>
+        canBePicked ? (selectButtonColor ?? Colors.lightGreen) : Colors.red);
     return Container(
       margin: EdgeInsets.all(10),
       child: Column(
