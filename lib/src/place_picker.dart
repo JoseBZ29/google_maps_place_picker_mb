@@ -78,6 +78,7 @@ class PlacePicker extends StatefulWidget {
     this.onMapTypeChanged,
     this.zoomGesturesEnabled = true,
     this.zoomControlsEnabled = false,
+    this.selectButtonColor,
   }) : super(key: key);
 
   final String apiKey;
@@ -232,6 +233,10 @@ class PlacePicker extends StatefulWidget {
 
   /// Allow user to make visible the zoom button
   final bool zoomControlsEnabled;
+
+  /// The color that will be shown on the select button.
+  /// If not set, the default color will be used.
+  final Color? selectButtonColor;
 
   @override
   _PlacePickerState createState() => _PlacePickerState();
@@ -480,6 +485,7 @@ class _PlacePickerState extends State<PlacePicker> {
       forceSearchOnZoomChanged: widget.forceSearchOnZoomChanged,
       hidePlaceDetailsWhenDraggingPin: widget.hidePlaceDetailsWhenDraggingPin,
       selectText: widget.selectText,
+      selectButtonColor: widget.selectButtonColor,
       outsideOfPickAreaText: widget.outsideOfPickAreaText,
       onToggleMapType: () {
         if (provider == null) return;
