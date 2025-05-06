@@ -412,6 +412,7 @@ class _PlacePickerState extends State<PlacePicker> {
                 inputDecoration: const InputDecoration(
                     hintText: "Buscar dirección",
                     suffixIcon: Icon(Icons.search),
+                    fillColor: Colors.white,
                     suffixIconColor: Colors.black),
               ),
             ),
