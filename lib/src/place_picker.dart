@@ -409,9 +409,15 @@ class _PlacePickerState extends State<PlacePicker> {
                 focusNode: focusNode,
                 isCrossBtnShown: false,
                 debounceTime: 400,
+                boxDecoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey),
+                ),
                 inputDecoration: const InputDecoration(
                     hintText: "Buscar dirección",
                     suffixIcon: Icon(Icons.search),
+                    border: InputBorder.none,
                     fillColor: Colors.white,
                     suffixIconColor: Colors.black),
               ),
